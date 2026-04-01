@@ -33,7 +33,14 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(900, 900);
+  let sz = min(windowWidth - 40, windowHeight - 120, 900);
+  createCanvas(sz, sz);
+
+  // scale radii proportionally to canvas size
+  let scaleFactor = sz / 900;
+  circleR     = 150 * scaleFactor;
+  shapeScale  = 250 * scaleFactor;
+
   background(0);
   stroke(255);
   strokeWeight(0.35);
