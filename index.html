@@ -3,11 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>F1 Spirograph</title>
-    <!-- base href resolves sketch.js and SVG relative paths from the p5/ folder -->
-    <base href="./p5/">
+    <title>We go round and round again...</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/addons/p5.sound.min.js"></script>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,28 +12,142 @@
         background: #000;
         color: #fff;
         font-family: 'Georgia', serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px 20px;
+        padding: 40px 24px 60px;
       }
 
       h1 {
-        font-size: 2rem;
-        letter-spacing: 0.12em;
+        font-size: 1.6rem;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        margin-bottom: 24px;
-        opacity: 0.9;
+        text-align: center;
+        margin-bottom: 36px;
+        opacity: 0.85;
       }
 
-      canvas {
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-auto-rows: auto;
+        gap: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .cell h2 {
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.7;
+        text-align: center;
+      }
+
+      .location {
+        font-size: 0.6rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.4;
+        text-align: center;
+        margin-top: -6px;
+      }
+
+      .race-count {
+        font-size: 0.55rem;
+        letter-spacing: 0.06em;
+        opacity: 0.3;
+        text-align: center;
+        margin-top: -4px;
+      }
+
+      .canvas-container {
+        width: 100%;
+        aspect-ratio: 1;
+        background: #000;
+      }
+
+      .canvas-container canvas {
         display: block;
-        max-width: 100%;
+        width: 100% !important;
+        height: 100% !important;
       }
     </style>
   </head>
   <body>
-    <h1>Autodromo di Monza</h1>
-    <script src="sketch.js"></script>
+    <h1>F1 Spirograph</h1>
+
+    <div class="grid" id="grid"></div>
+
+    <script src="p5/grid-sketch.js"></script>
+    <script>
+      // 2026 F1 Season — 22 rounds in calendar order.
+      // races: F1 championship race count at this specific circuit, from
+      //        https://en.wikipedia.org/wiki/List_of_Formula_One_circuits (fetched 2026-04-20).
+      //        Run scripts/update-race-counts.py to refresh.
+      const CIRCUITS = [
+        { title: 'Australian GP',    location: 'Melbourne',   svg: 'circuits/melbourne-2.svg',          races:  29 },
+        { title: 'Chinese GP',       location: 'Shanghai',    svg: 'circuits/shanghai-1.svg',            races:  19 },
+        { title: 'Japanese GP',      location: 'Suzuka',      svg: 'circuits/suzuka-2.svg',              races:  36 },
+        { title: 'Miami GP',         location: 'Miami',       svg: 'circuits/miami-1.svg',               races:   4 },
+        { title: 'Canadian GP',      location: 'Montréal',    svg: 'circuits/montreal-6.svg',            races:  44 },
+        { title: 'Monaco GP',        location: 'Monaco',      svg: 'circuits/monaco-6.svg',              races:  71 },
+        { title: 'Spanish GP',       location: 'Barcelona',   svg: 'circuits/catalunya-6.svg',           races:  35 },
+        { title: 'Austrian GP',      location: 'Spielberg',   svg: 'circuits/spielberg-3.svg',           races:  39 },
+        { title: 'British GP',       location: 'Silverstone', svg: 'circuits/silverstone-8.svg',         races:  60 },
+        { title: 'Belgian GP',       location: 'Spa',         svg: 'circuits/spa-francorchamps-4.svg',   races:  58 },
+        { title: 'Hungarian GP',     location: 'Budapest',    svg: 'circuits/hungaroring-3.svg',         races:  40 },
+        { title: 'Dutch GP',         location: 'Zandvoort',   svg: 'circuits/zandvoort-5.svg',           races:  35 },
+        { title: 'Italian GP',       location: 'Monza',       svg: 'circuits/monza-7.svg',               races:  75 },
+        { title: 'Madrid GP',        location: 'Madrid',      svg: 'circuits/madring-1.svg',             races:   0 },
+        { title: 'Azerbaijan GP',    location: 'Baku',        svg: 'circuits/baku-1.svg',                races:   9 },
+        { title: 'Singapore GP',     location: 'Marina Bay',  svg: 'circuits/marina-bay-4.svg',          races:  16 },
+        { title: 'United States GP', location: 'Austin',      svg: 'circuits/austin-1.svg',              races:  13 },
+        { title: 'Mexico City GP',   location: 'Mexico City', svg: 'circuits/mexico-city-3.svg',         races:  25 },
+        { title: 'São Paulo GP',     location: 'Interlagos',  svg: 'circuits/interlagos-2.svg',          races:  42 },
+        { title: 'Las Vegas GP',     location: 'Las Vegas',   svg: 'circuits/las-vegas-1.svg',           races:   3 },
+        { title: 'Qatar GP',         location: 'Lusail',      svg: 'circuits/lusail-1.svg',              races:   4 },
+        { title: 'Abu Dhabi GP',     location: 'Yas Marina',  svg: 'circuits/yas-marina-2.svg',          races:  17 },
+      ];
+
+      function buildGrid() {
+        const grid = document.getElementById('grid');
+
+        CIRCUITS.forEach(({ title, location, svg, races }) => {
+          const repeats = races;
+
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          const h2 = document.createElement('h2');
+          h2.textContent = title;
+
+          const sub = document.createElement('p');
+          sub.className = 'location';
+          sub.textContent = location;
+
+          const counter = document.createElement('p');
+          counter.className = 'race-count';
+          counter.textContent = `${repeats} race${repeats !== 1 ? 's' : ''}`;
+
+          const container = document.createElement('div');
+          container.className = 'canvas-container';
+
+          cell.appendChild(h2);
+          cell.appendChild(sub);
+          cell.appendChild(counter);
+          cell.appendChild(container);
+          grid.appendChild(cell);
+
+          new p5(makeSpirographSketch(container, svg, repeats), container);
+        });
+      }
+
+      buildGrid();
+    </script>
   </body>
 </html>
