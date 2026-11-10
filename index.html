@@ -2,25 +2,55 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>We go round and round again...</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Federo&family=Marcellus&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
     <style>
+      :root {
+        --gold: #d4af37;
+        --gold-light: #f3de8a;
+        --gold-dim: #b08d2c;
+        /* Swap these two to change the typefaces (and the Google Fonts link above). */
+        --font-display: 'Federo', 'Georgia', serif;
+        --font-body: 'Marcellus', 'Georgia', serif;
+      }
+
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
         background: #000;
-        color: #fff;
-        font-family: 'Georgia', serif;
+        color: var(--gold);
+        font-family: var(--font-body);
         padding: 40px 24px 60px;
+        padding-left: max(24px, env(safe-area-inset-left));
+        padding-right: max(24px, env(safe-area-inset-right));
       }
+      body.locked { overflow: hidden; }
 
       h1 {
-        font-size: 1.6rem;
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: clamp(1.2rem, 4.5vw, 2rem);
         letter-spacing: 0.14em;
         text-transform: uppercase;
         text-align: center;
-        margin-bottom: 36px;
+        margin-bottom: 12px;
+        background: linear-gradient(180deg, var(--gold-light), var(--gold) 55%, var(--gold-dim));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .subtitle {
+        max-width: 640px;
+        margin: 0 auto 36px;
+        text-align: center;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        letter-spacing: 0.04em;
         opacity: 0.85;
       }
 
@@ -38,31 +68,45 @@
         flex-direction: column;
         align-items: center;
         gap: 10px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: opacity 0.3s, transform 0.3s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .cell:focus-visible { outline: 1px solid var(--gold-dim); outline-offset: 2px; }
+
+      /* Hover (mouse devices only): dim every other circuit, lift the hovered one. */
+      @media (hover: hover) {
+        .grid:has(.cell:hover) .cell:not(:hover) { opacity: 0.25; }
+        .cell:hover { transform: scale(1.08); position: relative; z-index: 1; }
       }
 
       .cell h2 {
-        font-size: 0.7rem;
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 0.85rem;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        opacity: 0.7;
         text-align: center;
       }
 
       .location {
-        font-size: 0.6rem;
+        font-size: 0.75rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        opacity: 0.4;
+        opacity: 0.75;
         text-align: center;
         margin-top: -6px;
       }
 
       .race-count {
-        font-size: 0.55rem;
+        font-family: var(--font-display);
+        font-size: 1.15rem;
         letter-spacing: 0.06em;
-        opacity: 0.3;
+        color: var(--gold-light);
         text-align: center;
-        margin-top: -4px;
+        margin-top: -2px;
       }
 
       .canvas-container {
@@ -76,52 +120,226 @@
         width: 100% !important;
         height: 100% !important;
       }
+
+      .error { text-align: center; opacity: 0.8; }
+
+      footer {
+        max-width: 900px;
+        margin: 56px auto 0;
+        padding-top: 20px;
+        border-top: 1px solid rgba(212, 175, 55, 0.3);
+        text-align: center;
+        font-size: 0.8rem;
+        line-height: 1.8;
+        letter-spacing: 0.05em;
+        opacity: 0.8;
+      }
+      footer a { color: var(--gold-light); text-decoration: underline; text-underline-offset: 3px; }
+      footer a:hover, footer a:focus-visible { color: #fff; }
+
+      /* ── detail overlay ─────────────────────────────────────────────── */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: #000;
+        display: none;
+        padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+                 max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+      }
+      .overlay.open { display: flex; }
+
+      .detail {
+        position: relative;
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        column-gap: 48px;
+        row-gap: 20px;
+        border: 1px solid var(--gold-dim);
+        outline: 1px solid var(--gold-dim);
+        outline-offset: 4px;
+        padding: 32px;
+        min-height: 0;
+      }
+
+      .detail-head { grid-column: 1 / -1; text-align: center; }
+      .detail-head h2 {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0 40px;
+      }
+      .detail-head p { opacity: 0.75; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.8rem; margin-top: 6px; }
+
+      .detail-art {
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .detail-art .canvas-container { width: min(100%, calc(100vh - 230px)); }
+
+      .detail-list { overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; padding-right: 8px; }
+      .detail-list table { width: 100%; border-collapse: separate; border-spacing: 0; }
+      .detail-list th {
+        position: sticky; top: 0; z-index: 2; background: #000;
+        font-family: var(--font-display); font-weight: 400;
+        text-align: left; letter-spacing: 0.1em; text-transform: uppercase;
+        font-size: 0.8rem; padding: 8px 4px; border-bottom: 1px solid var(--gold-dim);
+      }
+      .detail-list td { padding: 7px 4px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-size: 1rem; }
+      .detail-list td:first-child { width: 5rem; font-variant-numeric: tabular-nums; color: var(--gold-dim); }
+      .detail-empty { text-align: center; opacity: 0.8; padding: 24px 0; }
+
+      .close {
+        position: absolute; top: 8px; right: 8px;
+        width: 44px; height: 44px;
+        background: none; border: 0; color: var(--gold);
+        font-size: 1.6rem; line-height: 1; cursor: pointer;
+      }
+      .close:hover, .close:focus-visible { color: var(--gold-light); outline: none; }
+
+      /* ── responsive ─────────────────────────────────────────────────── */
+      @media (max-width: 1000px) {
+        .grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      }
+      @media (max-width: 700px) {
+        body { padding: 24px 12px 40px; }
+        .subtitle { margin-bottom: 24px; font-size: 0.85rem; }
+        .cell .race-count { font-size: 1rem; }
+        .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .cell { padding: 4px; }
+        .cell h2 { font-size: 0.75rem; }
+
+        .overlay { padding: 0; }
+        .detail {
+          border: 0; outline: 0;
+          padding: 0 16px 16px;
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: auto auto minmax(0, 1fr);
+          row-gap: 16px;
+          overflow-y: auto;
+        }
+        .detail-art .canvas-container { width: min(100%, 70vh); }
+        .detail-list { overflow: visible; }
+        .detail-head { padding-top: 56px; }
+        .detail-list th { top: 0; }
+        .close { position: fixed; z-index: 3; top: max(8px, env(safe-area-inset-top)); right: 8px; }
+      }
+      @media (max-width: 380px) {
+        .grid { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
     <h1>We go round and round again...</h1>
+    <p class="subtitle">Each spirograph repeats its circuit's outline once for every Formula One race held there. The more races, the denser the pattern. Tap a circuit to see its winners.</p>
 
     <div class="grid" id="grid"></div>
+
+    <footer>
+      <p>Race counts and winners: <a href="https://github.com/jolpica/jolpica-f1" target="_blank" rel="noopener">Jolpica F1 API</a>, updated weekly after each race.</p>
+      <p>Circuit outlines: <a href="https://github.com/MisterSix2295/f1-circuits-svg" target="_blank" rel="noopener">f1-circuits-svg</a> by Jules Roy (MIT license).</p>
+      <p>Created by Svetlana Zadedyurina · November 2026</p>
+    </footer>
+
+    <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <div class="detail">
+        <button class="close" id="close" aria-label="Close">&times;</button>
+        <div class="detail-head">
+          <h2 id="detail-title"></h2>
+          <p id="detail-sub"></p>
+        </div>
+        <div class="detail-art" id="detail-art"></div>
+        <div class="detail-list" id="detail-list"></div>
+      </div>
+    </div>
 
     <script src="p5/grid-sketch.js"></script>
     <script>
       // 2026 F1 Season — 22 rounds in calendar order.
-      // races: F1 championship race count at this specific circuit, from
-      //        https://en.wikipedia.org/wiki/List_of_Formula_One_circuits (fetched 2026-04-20).
-      //        Run scripts/update-race-counts.py to refresh.
+      // Race counts and winners live in data/circuits.json, refreshed weekly by
+      // .github/workflows/update-data.yml (scripts/update-data.py, Jolpica F1 API).
       const CIRCUITS = [
-        { title: 'Australian GP',    location: 'Melbourne',   svg: 'circuits/melbourne-2.svg',          races:  29 },
-        { title: 'Chinese GP',       location: 'Shanghai',    svg: 'circuits/shanghai-1.svg',            races:  19 },
-        { title: 'Japanese GP',      location: 'Suzuka',      svg: 'circuits/suzuka-2.svg',              races:  36 },
-        { title: 'Miami GP',         location: 'Miami',       svg: 'circuits/miami-1.svg',               races:   4 },
-        { title: 'Canadian GP',      location: 'Montréal',    svg: 'circuits/montreal-6.svg',            races:  44 },
-        { title: 'Monaco GP',        location: 'Monaco',      svg: 'circuits/monaco-6.svg',              races:  71 },
-        { title: 'Spanish GP',       location: 'Barcelona',   svg: 'circuits/catalunya-6.svg',           races:  35 },
-        { title: 'Austrian GP',      location: 'Spielberg',   svg: 'circuits/spielberg-3.svg',           races:  39 },
-        { title: 'British GP',       location: 'Silverstone', svg: 'circuits/silverstone-8.svg',         races:  60 },
-        { title: 'Belgian GP',       location: 'Spa',         svg: 'circuits/spa-francorchamps-4.svg',   races:  58 },
-        { title: 'Hungarian GP',     location: 'Budapest',    svg: 'circuits/hungaroring-3.svg',         races:  40 },
-        { title: 'Dutch GP',         location: 'Zandvoort',   svg: 'circuits/zandvoort-5.svg',           races:  35 },
-        { title: 'Italian GP',       location: 'Monza',       svg: 'circuits/monza-7.svg',               races:  75 },
-        { title: 'Madrid GP',        location: 'Madrid',      svg: 'circuits/madring-1.svg',             races:   0 },
-        { title: 'Azerbaijan GP',    location: 'Baku',        svg: 'circuits/baku-1.svg',                races:   9 },
-        { title: 'Singapore GP',     location: 'Marina Bay',  svg: 'circuits/marina-bay-4.svg',          races:  16 },
-        { title: 'United States GP', location: 'Austin',      svg: 'circuits/austin-1.svg',              races:  13 },
-        { title: 'Mexico City GP',   location: 'Mexico City', svg: 'circuits/mexico-city-3.svg',         races:  25 },
-        { title: 'São Paulo GP',     location: 'Interlagos',  svg: 'circuits/interlagos-2.svg',          races:  42 },
-        { title: 'Las Vegas GP',     location: 'Las Vegas',   svg: 'circuits/las-vegas-1.svg',           races:   3 },
-        { title: 'Qatar GP',         location: 'Lusail',      svg: 'circuits/lusail-1.svg',              races:   4 },
-        { title: 'Abu Dhabi GP',     location: 'Yas Marina',  svg: 'circuits/yas-marina-2.svg',          races:  17 },
+        { title: 'Australian GP',    location: 'Melbourne',   svg: 'circuits/melbourne-2.svg' },
+        { title: 'Chinese GP',       location: 'Shanghai',    svg: 'circuits/shanghai-1.svg' },
+        { title: 'Japanese GP',      location: 'Suzuka',      svg: 'circuits/suzuka-2.svg' },
+        { title: 'Miami GP',         location: 'Miami',       svg: 'circuits/miami-1.svg' },
+        { title: 'Canadian GP',      location: 'Montréal',    svg: 'circuits/montreal-6.svg' },
+        { title: 'Monaco GP',        location: 'Monaco',      svg: 'circuits/monaco-6.svg' },
+        { title: 'Spanish GP',       location: 'Barcelona',   svg: 'circuits/catalunya-6.svg' },
+        { title: 'Austrian GP',      location: 'Spielberg',   svg: 'circuits/spielberg-3.svg' },
+        { title: 'British GP',       location: 'Silverstone', svg: 'circuits/silverstone-8.svg' },
+        { title: 'Belgian GP',       location: 'Spa',         svg: 'circuits/spa-francorchamps-4.svg' },
+        { title: 'Hungarian GP',     location: 'Budapest',    svg: 'circuits/hungaroring-3.svg' },
+        { title: 'Dutch GP',         location: 'Zandvoort',   svg: 'circuits/zandvoort-5.svg' },
+        { title: 'Italian GP',       location: 'Monza',       svg: 'circuits/monza-7.svg' },
+        { title: 'Madrid GP',        location: 'Madrid',      svg: 'circuits/madring-1.svg' },
+        { title: 'Azerbaijan GP',    location: 'Baku',        svg: 'circuits/baku-1.svg' },
+        { title: 'Singapore GP',     location: 'Marina Bay',  svg: 'circuits/marina-bay-4.svg' },
+        { title: 'United States GP', location: 'Austin',      svg: 'circuits/austin-1.svg' },
+        { title: 'Mexico City GP',   location: 'Mexico City', svg: 'circuits/mexico-city-3.svg' },
+        { title: 'São Paulo GP',     location: 'Interlagos',  svg: 'circuits/interlagos-2.svg' },
+        { title: 'Las Vegas GP',     location: 'Las Vegas',   svg: 'circuits/las-vegas-1.svg' },
+        { title: 'Qatar GP',         location: 'Lusail',      svg: 'circuits/lusail-1.svg' },
+        { title: 'Abu Dhabi GP',     location: 'Yas Marina',  svg: 'circuits/yas-marina-2.svg' },
       ];
 
-      function buildGrid() {
+      // One entry per grid cell: { sketch, visible }. Sketches are created lazily
+      // (when the cell nears the viewport, one per animation frame) and paused
+      // while off-screen or while the detail overlay is open.
+      const gridEntries = [];
+      let overlayOpen = false;
+      const startQueue = [];
+      let startScheduled = false;
+
+      function syncEntry(e) {
+        if (!e.sketch) return;
+        if (e.visible && !overlayOpen) e.sketch.loop(); else e.sketch.noLoop();
+      }
+
+      function drainStartQueue() {
+        const e = startQueue.shift();
+        if (e && !e.sketch) { e.sketch = e.create(); syncEntry(e); }
+        if (startQueue.length) requestAnimationFrame(drainStartQueue); else startScheduled = false;
+      }
+
+      const observer = new IntersectionObserver((records) => {
+        records.forEach(({ target, isIntersecting }) => {
+          const e = target._entry;
+          e.visible = isIntersecting;
+          if (isIntersecting && !e.sketch && !startQueue.includes(e)) {
+            startQueue.push(e);
+            if (!startScheduled) { startScheduled = true; requestAnimationFrame(drainStartQueue); }
+          }
+          syncEntry(e);
+        });
+      }, { rootMargin: '200px' });
+      let detailSketch = null;
+      let lastFocus = null;
+
+      const overlay = document.getElementById('overlay');
+      const countLabel = (n) => `${n} race${n !== 1 ? 's' : ''}`;
+
+      function buildGrid(data) {
         const grid = document.getElementById('grid');
 
-        CIRCUITS.forEach(({ title, location, svg, races }) => {
-          const repeats = races;
+        CIRCUITS.forEach((circuit) => {
+          const { title, location, svg } = circuit;
+          const info = data[title] || { races: 0, winners: [] };
+          const repeats = info.races;
 
           const cell = document.createElement('div');
           cell.className = 'cell';
+          cell.tabIndex = 0;
+          cell.setAttribute('role', 'button');
+          cell.setAttribute('aria-label', `${title}, ${location}: show winners`);
 
           const h2 = document.createElement('h2');
           h2.textContent = title;
@@ -132,22 +350,94 @@
 
           const counter = document.createElement('p');
           counter.className = 'race-count';
-          counter.textContent = `${repeats} race${repeats !== 1 ? 's' : ''}`;
+          counter.textContent = countLabel(repeats);
 
           const container = document.createElement('div');
           container.className = 'canvas-container';
 
-          cell.appendChild(h2);
-          cell.appendChild(sub);
-          cell.appendChild(counter);
-          cell.appendChild(container);
+          cell.append(h2, sub, counter, container);
           grid.appendChild(cell);
 
-          new p5(makeSpirographSketch(container, svg, repeats), container);
+          const entry = { sketch: null, visible: false,
+                          create: () => new p5(makeSpirographSketch(container, svg, repeats), container) };
+          cell._entry = entry;
+          gridEntries.push(entry);
+          observer.observe(cell);
+
+          cell.addEventListener('click', () => openDetail(circuit, info, cell));
+          cell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(circuit, info, cell); }
+          });
         });
       }
 
-      buildGrid();
+      function openDetail({ title, location, svg }, info, trigger) {
+        lastFocus = trigger;
+        document.getElementById('detail-title').textContent = title;
+        document.getElementById('detail-sub').textContent = `${location} · ${countLabel(info.races)}`;
+
+        const list = document.getElementById('detail-list');
+        list.replaceChildren();
+        if (info.winners.length) {
+          const table = document.createElement('table');
+          table.innerHTML = '<thead><tr><th scope="col">Year</th><th scope="col">Winner</th></tr></thead>';
+          const tbody = document.createElement('tbody');
+          info.winners.forEach(({ year, driver }) => {
+            const tr = document.createElement('tr');
+            const y = document.createElement('td'); y.textContent = year;
+            const d = document.createElement('td'); d.textContent = driver;
+            tr.append(y, d);
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          list.appendChild(table);
+        } else {
+          const empty = document.createElement('p');
+          empty.className = 'detail-empty';
+          empty.textContent = 'No races held at this circuit yet.';
+          list.appendChild(empty);
+        }
+
+        const art = document.getElementById('detail-art');
+        art.replaceChildren();
+        overlayOpen = true;
+        gridEntries.forEach(syncEntry);
+        document.body.classList.add('locked');
+        overlay.classList.add('open');
+
+        if (info.races > 0) {
+          const container = document.createElement('div');
+          container.className = 'canvas-container';
+          art.appendChild(container);
+          detailSketch = new p5(makeSpirographSketch(container, svg, info.races), container);
+        }
+        document.getElementById('close').focus();
+      }
+
+      function closeDetail() {
+        if (!overlay.classList.contains('open')) return;
+        if (detailSketch) { detailSketch.remove(); detailSketch = null; }
+        overlay.classList.remove('open');
+        document.body.classList.remove('locked');
+        overlayOpen = false;
+        gridEntries.forEach(syncEntry);
+        if (lastFocus) lastFocus.focus();
+      }
+
+      document.getElementById('close').addEventListener('click', closeDetail);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+      fetch('data/circuits.json')
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(buildGrid)
+        .catch((err) => {
+          console.error(err);
+          const msg = document.createElement('p');
+          msg.className = 'error';
+          msg.textContent = 'Could not load race data.';
+          document.getElementById('grid').replaceWith(msg);
+        });
     </script>
   </body>
 </html>
