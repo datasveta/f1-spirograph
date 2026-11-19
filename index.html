@@ -54,6 +54,32 @@
         opacity: 0.85;
       }
 
+      /* ── Static / Dynamic toggle ───────────────────────────────────── */
+      .mode-toggle {
+        display: flex;
+        justify-content: center;
+        margin: -12px auto 28px;
+      }
+      .mode-btn {
+        font-family: var(--font-display);
+        font-size: 0.8rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--gold);
+        background: none;
+        border: 1px solid var(--gold-dim);
+        padding: 10px 22px;
+        min-height: 44px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .mode-btn + .mode-btn { border-left: 0; }
+      .mode-btn:first-child { border-radius: 4px 0 0 4px; }
+      .mode-btn:last-child { border-radius: 0 4px 4px 0; }
+      .mode-btn[aria-pressed="true"] { background: var(--gold); color: #000; }
+      .mode-btn:not([aria-pressed="true"]):hover { color: var(--gold-light); }
+      .mode-btn:focus-visible { outline: 1px solid var(--gold-light); outline-offset: 2px; }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -183,7 +209,48 @@
         align-items: center;
         justify-content: center;
       }
-      .detail-art .canvas-container { width: min(100%, calc(100vh - 230px)); }
+      .detail-art .canvas-container { width: min(100%, calc(100vh - 230px)); flex: none; }
+
+      /* Dynamic mode: canvas on top, breathing settings underneath. */
+      .detail-art.with-settings {
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 14px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .detail-art.with-settings .canvas-container { width: min(100%, max(240px, calc(100vh - 230px - 315px))); }
+      .detail-art.with-settings:has(details.settings:not([open])) .canvas-container {
+        width: min(100%, calc(100vh - 230px - 70px));
+      }
+
+      .settings { width: 100%; max-width: 560px; font-size: 0.85rem; letter-spacing: 0.05em; }
+      .settings summary {
+        cursor: pointer; list-style: none; padding: 10px 0; min-height: 44px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.12em;
+        border-top: 1px solid rgba(212, 175, 55, 0.3);
+      }
+      .settings summary::-webkit-details-marker { display: none; }
+      .settings summary::after { content: '+'; font-size: 1.2rem; }
+      .settings[open] summary::after { content: '\2212'; }
+      .settings summary:focus-visible { outline: 1px solid var(--gold-dim); outline-offset: 2px; }
+      .settings-body { display: grid; gap: 12px; padding-bottom: 8px; }
+      .settings-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; }
+      .settings label.check { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; }
+      .settings label.check:has(input:disabled), .settings .slider-row:has(input:disabled) { opacity: 0.35; }
+      .settings-sliders { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 18px; }
+      .slider-row { display: grid; grid-template-columns: 1fr auto; align-items: center; row-gap: 2px; }
+      .slider-row .val { color: var(--gold-light); font-variant-numeric: tabular-nums; }
+      .slider-row input[type=range] { grid-column: 1 / -1; width: 100%; min-height: 28px; }
+      .settings input { accent-color: var(--gold); }
+      .settings select {
+        font-family: var(--font-body); font-size: 0.9rem; letter-spacing: 0.06em;
+        color: var(--gold); background: #111; border: 1px solid var(--gold-dim);
+        padding: 8px 10px; min-height: 40px; border-radius: 4px; width: 100%;
+      }
+      .settings select:disabled { opacity: 0.35; }
+      .settings .preset-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
 
       .detail-list { overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; padding-right: 8px; }
       .detail-list table { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -222,11 +289,23 @@
           border: 0; outline: 0;
           padding: 0 16px 16px;
           grid-template-columns: minmax(0, 1fr);
-          grid-template-rows: auto auto minmax(0, 1fr);
+          grid-template-rows: auto auto auto;
           row-gap: 16px;
           overflow-y: auto;
         }
-        .detail-art .canvas-container { width: min(100%, 70vh); }
+        /* Size rows by content (min-height:0 would let the art row collapse and
+           the settings panel spill over the winners table). */
+        .detail-art, .detail-list { min-height: auto; }
+        .detail-art .canvas-container,
+        .detail-art.with-settings .canvas-container,
+        .detail-art.with-settings:has(details.settings:not([open])) .canvas-container { width: min(100%, 70vh); }
+        .detail-art.with-settings { overflow: visible; }
+        .settings-checks { grid-template-columns: 1fr 1fr; }
+        .settings-sliders { grid-template-columns: 1fr; }
+        .settings label.check { min-height: 44px; }
+        .slider-row input[type=range] { min-height: 36px; }
+        .mode-toggle { margin-bottom: 20px; }
+        .mode-btn { flex: 1; max-width: 200px; }
         .detail-list { overflow: visible; }
         .detail-head { padding-top: 56px; }
         .detail-list th { top: 0; }
@@ -235,11 +314,26 @@
       @media (max-width: 380px) {
         .grid { grid-template-columns: 1fr; }
       }
+      /* Short viewports (landscape phones, small laptop windows): size the art by
+         width and let the whole detail panel scroll instead. */
+      @media (min-width: 701px) and (max-height: 600px) {
+        .detail { overflow-y: auto; grid-template-rows: auto auto; align-content: start; }
+        .detail-art, .detail-art.with-settings { overflow: visible; min-height: auto; }
+        .detail-art .canvas-container,
+        .detail-art.with-settings .canvas-container,
+        .detail-art.with-settings:has(details.settings:not([open])) .canvas-container { width: min(100%, 460px); }
+        .detail-list { overflow: visible; }
+      }
     </style>
   </head>
   <body>
     <h1>We go round and round again...</h1>
-    <p class="subtitle">Each spirograph repeats its circuit's outline once for every Formula One race held there. The more races, the denser the pattern. Tap a circuit to see its winners.</p>
+    <p class="subtitle">Each spirograph repeats its circuit's outline once for every Formula One race held there. The more races, the denser the pattern. Tap a circuit to see its winners. Switch to Dynamic and the patterns breathe, folding back into a single track outline and unfolding again.</p>
+
+    <div class="mode-toggle" role="group" aria-label="Display mode">
+      <button type="button" class="mode-btn" data-mode="static" aria-pressed="true">Static</button>
+      <button type="button" class="mode-btn" data-mode="dynamic" aria-pressed="false">Dynamic</button>
+    </div>
 
     <div class="grid" id="grid"></div>
 
@@ -262,6 +356,7 @@
     </div>
 
     <script src="p5/grid-sketch.js"></script>
+    <script src="p5/breathing-grid-sketch.js"></script>
     <script>
       // 2026 F1 Season — 22 rounds in calendar order.
       // Race counts and winners live in data/circuits.json, refreshed weekly by
@@ -310,17 +405,47 @@
         if (startQueue.length) requestAnimationFrame(drainStartQueue); else startScheduled = false;
       }
 
+      function enqueue(e) {
+        if (e.sketch || startQueue.includes(e)) return;
+        startQueue.push(e);
+        if (!startScheduled) { startScheduled = true; requestAnimationFrame(drainStartQueue); }
+      }
+
       const observer = new IntersectionObserver((records) => {
         records.forEach(({ target, isIntersecting }) => {
           const e = target._entry;
           e.visible = isIntersecting;
-          if (isIntersecting && !e.sketch && !startQueue.includes(e)) {
-            startQueue.push(e);
-            if (!startScheduled) { startScheduled = true; requestAnimationFrame(drainStartQueue); }
-          }
+          if (isIntersecting) enqueue(e);
           syncEntry(e);
         });
       }, { rootMargin: '200px' });
+
+      // ── Static / Dynamic mode ──────────────────────────────────────────
+      // Static = progressive spirograph (grid-sketch.js). Dynamic = breathing
+      // (breathing-grid-sketch.js). Choice is remembered between visits.
+      const MODE_KEY = 'f1-spirograph-mode';
+      let mode = 'static';
+      try { if (localStorage.getItem(MODE_KEY) === 'dynamic') mode = 'dynamic'; } catch (_) {}
+
+      function renderModeButtons() {
+        document.querySelectorAll('.mode-btn').forEach((b) =>
+          b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+      }
+
+      function setMode(next) {
+        if (next === mode) return;
+        mode = next;
+        try { localStorage.setItem(MODE_KEY, mode); } catch (_) {}
+        renderModeButtons();
+        gridEntries.forEach((e) => {
+          if (e.sketch) { e.sketch.remove(); e.sketch = null; }
+          if (e.visible) enqueue(e);
+        });
+      }
+
+      document.querySelectorAll('.mode-btn').forEach((b) =>
+        b.addEventListener('click', () => setMode(b.dataset.mode)));
+      renderModeButtons();
       let detailSketch = null;
       let lastFocus = null;
 
@@ -359,7 +484,9 @@
           grid.appendChild(cell);
 
           const entry = { sketch: null, visible: false,
-                          create: () => new p5(makeSpirographSketch(container, svg, repeats), container) };
+                          create: () => new p5(mode === 'dynamic'
+                            ? makeBreathingSketch(container, svg, repeats, null, { detail: false })
+                            : makeSpirographSketch(container, svg, repeats), container) };
           cell._entry = entry;
           gridEntries.push(entry);
           observer.observe(cell);
@@ -400,6 +527,7 @@
 
         const art = document.getElementById('detail-art');
         art.replaceChildren();
+        art.classList.toggle('with-settings', mode === 'dynamic' && info.races > 0);
         overlayOpen = true;
         gridEntries.forEach(syncEntry);
         document.body.classList.add('locked');
@@ -409,9 +537,107 @@
           const container = document.createElement('div');
           container.className = 'canvas-container';
           art.appendChild(container);
-          detailSketch = new p5(makeSpirographSketch(container, svg, info.races), container);
+          if (mode === 'dynamic') {
+            const state = breathDefaults();
+            art.appendChild(buildSettingsPanel(state, info.races));
+            detailSketch = new p5(makeBreathingSketch(container, svg, info.races, state, { detail: true }), container);
+          } else {
+            detailSketch = new p5(makeSpirographSketch(container, svg, info.races), container);
+          }
         }
         document.getElementById('close').focus();
+      }
+
+      // Breathing settings for the detail view. Mutates `state`, which the
+      // sketch reads every frame. No repeats control (it is the race count) and
+      // no audio.
+      function buildSettingsPanel(state, races) {
+        const single = races === 1;   // a lone outline only supports scale/colour/timing
+        const details = document.createElement('details');
+        details.className = 'settings';
+        // Open by default only where there is room (wide and tall); otherwise the
+        // artwork gets the space and the panel is one tap away.
+        details.open = window.matchMedia('(min-width: 701px) and (min-height: 860px)').matches;
+
+        const summary = document.createElement('summary');
+        summary.textContent = 'Settings';
+        const body = document.createElement('div');
+        body.className = 'settings-body';
+        details.append(summary, body);
+
+        const checks = document.createElement('div');
+        checks.className = 'settings-checks';
+        [['shapeBreath', 'Shape scale'], ['circleBreath', 'Circle radius'],
+         ['rotBreath', 'Rotation'], ['unwrapBreath', 'Unwrap'], ['colorBreath', 'Colour'],
+         ['drift', 'Slow drift']].forEach(([key, text]) => {
+          const label = document.createElement('label');
+          label.className = 'check';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = state[key];
+          if (single && ['circleBreath', 'rotBreath', 'unwrapBreath', 'drift'].includes(key)) input.disabled = true;
+          input.addEventListener('change', () => { state[key] = input.checked; });
+          label.append(input, document.createTextNode(text));
+          checks.appendChild(label);
+        });
+
+        const presetRow = document.createElement('label');
+        presetRow.className = 'preset-row';
+        presetRow.append(document.createTextNode('Style'));
+        const select = document.createElement('select');
+        [...Object.keys(BREATH_PRESETS), 'custom'].forEach((name) => {
+          const o = document.createElement('option');
+          o.value = name; o.textContent = name;
+          select.appendChild(o);
+        });
+        select.value = state.preset;
+        select.disabled = single;
+        presetRow.appendChild(select);
+
+        const sliders = document.createElement('div');
+        sliders.className = 'settings-sliders';
+        const rows = {};
+        const SLIDERS = [
+          ['shapeScale', 'Motif scale', 10, 600, 1, true],
+          ['circleR', 'Circle radius', 10, 400, 1, true],
+          ['rotMult', 'Rotation', -4, 4, 0.01, true],
+          ['unwrap', 'Unwrap', 0, 1, 0.001, false],
+          ['period', 'Breath (s)', 3, 20, 0.5, false],
+        ];
+        SLIDERS.forEach(([key, text, min, max, step, isPreset]) => {
+          const row = document.createElement('div');
+          row.className = 'slider-row';
+          const name = document.createElement('span');
+          name.textContent = text;
+          const val = document.createElement('span');
+          val.className = 'val';
+          const input = document.createElement('input');
+          input.type = 'range';
+          input.min = min; input.max = max; input.step = step; input.value = state[key];
+          input.setAttribute('aria-label', text);
+          const show = () => { val.textContent = Number(input.value).toFixed(step < 1 ? (step < 0.01 ? 2 : 1) : 0); };
+          show();
+          if (single && key !== 'period') input.disabled = true;
+          input.addEventListener('input', () => {
+            state[key] = Number(input.value);
+            show();
+            if (isPreset) { state.preset = 'custom'; select.value = 'custom'; }
+          });
+          row.append(name, val, input);
+          rows[key] = { input, show };
+          sliders.appendChild(row);
+        });
+
+        select.addEventListener('change', () => {
+          state.preset = select.value;
+          const preset = BREATH_PRESETS[select.value];
+          if (!preset) return;
+          Object.assign(state, preset);
+          Object.keys(preset).forEach((k) => { rows[k].input.value = state[k]; rows[k].show(); });
+        });
+
+        body.append(checks, presetRow, sliders);
+        return details;
       }
 
       function closeDetail() {
